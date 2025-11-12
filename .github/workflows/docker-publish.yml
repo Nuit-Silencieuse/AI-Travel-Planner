@@ -2,14 +2,13 @@
 
 name: Build and Push Docker Images to ACR
 
-# This workflow runs when code is pushed to the 'main' branch
 on:
   push:
     branches: [ "main" ]
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest # Use a Linux runner
+    runs-on: ubuntu-latest
 
     steps:
       # 1. Check out the repository code
@@ -36,32 +35,44 @@ jobs:
       - name: Log in to ACR
         uses: docker/login-action@v2
         with:
-          registry: registry.${{ secrets.ACR_REGION }}.aliyuncs.com
+          registry: ${{ secrets.ACR_REGISTRY_URL }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
       # 5. Build and Push Backend Image
       - name: Build and Push Backend
         run: |
+          # The repository name is the same as the namespace
+          IMAGE_NAME="${{ secrets.ACR_REGISTRY_URL }}/${{ secrets.ACR_NAMESPACE }}/${{ secrets.ACR_NAMESPACE }}:backend-${{ github.sha }}"
+          
+          echo "Building and pushing backend image: $IMAGE_NAME"
+          
           docker build \
-            -t registry.${{ secrets.ACR_REGION }}.aliyuncs.com/${{ secrets.ACR_INSTANCE_NAME }}/ai-travel-planner-backend:${{ github.sha }} \
+            -t "$IMAGE_NAME" \
             -f backend/Dockerfile.backend \
             ./backend
-          docker push registry.${{ secrets.ACR_REGION }}.aliyuncs.com/${{ secrets.ACR_INSTANCE_NAME }}/ai-travel-planner-backend:${{ github.sha }}
+            
+          docker push "$IMAGE_NAME"
 
       # 6. Build and Push Frontend Image
       - name: Build and Push Frontend
         run: |
+          # The repository name is the same as the namespace
+          IMAGE_NAME="${{ secrets.ACR_REGISTRY_URL }}/${{ secrets.ACR_NAMESPACE }}/${{ secrets.ACR_NAMESPACE }}:frontend-${{ github.sha }}"
+          
+          echo "Building and pushing frontend image: $IMAGE_NAME"
+          
           # Create the .env file for the build process
           echo "VITE_AMAP_KEY=${{ secrets.AMAP_KEY }}" > ./frontend/.env
           
           docker build \
-            -t registry.${{ secrets.ACR_REGION }}.aliyuncs.com/${{ secrets.ACR_INSTANCE_NAME }}/ai-travel-planner-frontend:${{ github.sha }} \
+            -t "$IMAGE_NAME" \
             -f frontend/Dockerfile.frontend \
             ./frontend
-          docker push registry.${{ secrets.ACR_REGION }}.aliyuncs.com/${{ secrets.ACR_INSTANCE_NAME }}/ai-travel-planner-frontend:${{ github.sha }}
+            
+          docker push "$IMAGE_NAME"
 
       # 7. (Optional) Clean up .env file
       - name: Clean up frontend .env file
-        if: always() # Always run this step, even if previous steps fail
+        if: always()
         run: rm ./frontend/.env

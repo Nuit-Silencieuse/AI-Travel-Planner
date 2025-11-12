@@ -7,9 +7,11 @@ services:
     container_name: ai-travel-planner-backend
     ports:
       - "8080:8080"
-    # The backend now connects to the remote Supabase DB,
-    # so it no longer depends on a local 'db' service.
-    # Environment variables for the database are configured in application.properties.
+    env_file:
+      - .env # Load environment variables from a .env file in the root directory
+    # The backend now connects to the remote Supabase DB.
+    # Environment variables for the database are configured in application.properties
+    # and sourced from the .env file above.
 
   frontend:
     build:
