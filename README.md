@@ -50,23 +50,23 @@ AI Travel Planner 是一款基于大语言模型（LLM）的智能旅行规划 W
 
 ### 2. 配置环境变量
 
-项目启动需要配置一些密钥和 API Key。
+项目通过根目录下的 `.env` 文件读取所有必需的密钥和配置。
 
 1.  **复制模板文件**: 在项目根目录下，将 `env.template` 文件复制并重命名为 `.env`。
-2.  **填写密钥**: 打开新的 `.env` 文件，并填入以下所有必需的值：
+2.  **填写密钥**: 打开新的 `.env` 文件，并填入以下所有必需的值。这些值将被 `docker-compose.yml` 自动读取并注入到对应的容器中。
 
     ```env
-    # 后端环境变量
+    # 后端环境变量 (Spring Boot)
     DB_URL=jdbc:postgresql://<your-supabase-db-host-and-port>/postgres
     DB_USERNAME=postgres
     DB_PASSWORD=<your-supabase-db-password>
     JWT_JWK_SET_URI=https://<your-supabase-project-ref>.supabase.co/auth/v1/.well-known/jwks.json
     ALIYUN_LLM_API_KEY=<your-aliyun-api-key>
-
-    # 前端环境变量
+    
+    # 前端环境变量 (Vite)
     VITE_AMAP_KEY=<your-amap-key>
     ```
-    > **提示**: Supabase 相关的 URL 和密码可以在您的 Supabase 项目的 `Settings -> Database` 和 `Settings -> API` 中找到。
+    > **提示**: Supabase 相关的 URL 和密码可以在您的 Supabase 项目的 `Settings -> Database` 和 `Settings -> API` 中找到。后端的 `application.properties` 文件已配置为从这些环境变量中读取值。
 
 ### 3. 启动应用
 
@@ -81,28 +81,30 @@ docker-compose up --build
 
 ---
 
-## ☁️ 部署与运行 (从阿里云 ACR)
+## ☁️ 部署与运行 (从 GitHub Releases)
 
-本项目的 GitHub Actions 会在代码推送到 `main` 分支后，自动将前后端镜像推送到阿里云 ACR。以下是如何从 ACR 拉取并运行这些镜像的说明。
+本项目的 GitHub Actions 会在代码推送到 `main` 分支后，自动构建前后端镜像，并将其打包成 `.tar` 文件上传到 GitHub Releases。
 
-### 1. 拉取镜像
+### 1. 下载并加载镜像
 
-请将 `<your-registry-url>`, `<your-namespace>`, 和 `<sha-commit-hash>` 替换为您的实际信息。
+1.  前往本项目的 [GitHub Releases](https://github.com/your-username/your-repo/releases) 页面。
+2.  下载最新的 `backend-image.tar` 和 `frontend-image.tar` 文件。
+3.  使用 `docker load` 命令将镜像加载到本地 Docker 中：
 
-```bash
-# 拉取后端镜像
-docker pull <your-registry-url>/<your-namespace>/<your-namespace>:backend-<sha-commit-hash>
+    ```bash
+    # 加载后端镜像
+    docker load < backend-image.tar
 
-# 拉取前端镜像
-docker pull <your-registry-url>/<your-namespace>/<your-namespace>:frontend-<sha-commit-hash>
-```
-> **示例**: `docker pull crpi-xxx.cn-hangzhou.personal.cr.aliyuncs.com/nuit_ai_travel_planner/nuit_ai_travel_planner:backend-a1b2c3d`
+    # 加载前端镜像
+    docker load < frontend-image.tar
+    ```
+    加载成功后，您可以使用 `docker images` 命令查看到导入的镜像。
 
 ### 2. 运行容器
 
 #### 运行后端容器
 
-您**必须**通过 `-e` 参数将所有环境变量注入到容器中。
+您**必须**通过 `-e` 参数将所有环境变量注入到容器中。请将 `<...>` 替换为您的实际密钥。
 
 ```bash
 docker run -d \
@@ -113,22 +115,21 @@ docker run -d \
   -e JWT_JWK_SET_URI="https://<...>.supabase.co/auth/v1/.well-known/jwks.json" \
   -e ALIYUN_LLM_API_KEY="sk-<...>" \
   --name ai-travel-planner-backend \
-  <your-registry-url>/<your-namespace>/<your-namespace>:backend-<sha-commit-hash>
+  registry.cn-hangzhou.aliyuncs.com/nuit_ai_travel_planner/nuit_ai_travel_planner:backend-latest
 ```
+> **注意**: 请将命令最后的镜像名替换为您通过 `docker images` 查看到的实际镜像名和标签。
 
 #### 运行前端容器
 
-前端容器需要通过 `VITE_AMAP_KEY` 来加载高德地图。由于我们的 Dockerfile 设计是在构建时注入此 Key，因此从 ACR 拉取的镜像已经包含了这个 Key，可以直接运行。
-
-**但是**，如果需要在运行时覆盖或提供 Key，则需要更复杂的 Nginx 配置。基于当前简单的部署需求，我们假设构建时 Key 已注入。
+前端镜像在构建时已经包含了运行所需的配置，可以直接启动。
 
 ```bash
 docker run -d \
   -p 80:80 \
   --name ai-travel-planner-frontend \
-  <your-registry-url>/<your-namespace>/<your-namespace>:frontend-<sha-commit-hash>
+  registry.cn-hangzhou.aliyuncs.com/nuit_ai_travel_planner/nuit_ai_travel_planner:frontend-latest
 ```
-> **注意**: 前端容器依赖后端服务。在上面的命令中，前端容器会尝试连接到 `http://localhost:8080`。如果您的后端容器没有部署在宿主机的 8080 端口，您需要重建前端镜像，并在 `MainDashboard.vue` 中修改 `fetch` 请求的 URL。
+> **注意**: 前端容器默认会连接 `http://localhost:8080` 上的后端服务。如果您的后端部署在其他地址，您需要修改 `frontend/src/components/MainDashboard.vue` 文件中的 API 请求地址，并重新构建前端镜像。
 
 ### 3. 访问应用
 

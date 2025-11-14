@@ -1,0 +1,29 @@
+spring.application.name=ai-travel-planner
+
+# ==================================
+# = Database Configuration         =
+# ==================================
+# For local development, you can hardcode values in your local application.properties.
+# In production (Docker), these will be injected as environment variables.
+spring.datasource.url=${DB_URL}
+spring.datasource.username=${DB_USERNAME}
+spring.datasource.password=${DB_PASSWORD}
+
+# ==================================
+# = JPA & Logging Configuration    =
+# ==================================
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+logging.level.org.springframework.security=DEBUG
+
+# ==================================
+# = Security Configuration         =
+# ==================================
+# This URI points to Supabase's public keys for JWT validation.
+supabase.jwt-secret=${JWT_JWK_SET_URI}
+
+# ==================================
+# = External Services Configuration=
+# ==================================
+# Aliyun Dashscope LLM API Key
+aliyun.llm.api-key=${ALIYUN_LLM_API_KEY}

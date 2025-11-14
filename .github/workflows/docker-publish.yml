@@ -48,6 +48,11 @@ jobs:
           echo "Building and pushing backend image: $IMAGE_NAME"
           
           docker build \
+            --build-arg DB_URL="${{ secrets.DB_URL }}" \
+            --build-arg DB_USERNAME="${{ secrets.DB_USERNAME }}" \
+            --build-arg DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
+            --build-arg JWT_JWK_SET_URI="${{ secrets.JWT_JWK_SET_URI }}" \
+            --build-arg ALIYUN_LLM_API_KEY="${{ secrets.ALIYUN_LLM_API_KEY }}" \
             -t "$IMAGE_NAME" \
             -f backend/Dockerfile.backend \
             ./backend
